@@ -1,0 +1,77 @@
+{
+  "appliances": [
+    {
+      "applianceId": "a0000000-0000-0000-0000-000000000001",
+      "applianceOnline": true,
+      "applianceConnectionStatus": "Connected",
+      "applianceType": "HeatPump",
+      "pairingStatus": "Paired",
+      "houseName": "Home",
+      "errorStatus": "Running",
+      "activeThermalMode": "Heating",
+      "operatingMode": "AutomaticHeating",
+      "outdoorTemperatureInformation": {
+        "outdoorTemperatureSource": "Wired",
+        "applianceOutdoorTemperature": 9.5,
+        "cloudOutdoorTemperature": 10,
+        "cloudOutdoorTemperatureStatus": "Ok"
+      },
+      "holidaySchedule": {
+        "startTime": "0001-01-01T00:00:01Z",
+        "endTime": "0001-01-01T00:00:01Z",
+        "active": false
+      },
+      "waterPressure": 1.7,
+      "waterPressureOK": true,
+      "capabilityEnergyConsumption": true,
+      "capabilityCooling": false,
+      "hotWaterZones": [
+        {
+          "hotWaterZoneId": "d0000000-0000-0000-0000-000000000001",
+          "applianceId": "a0000000-0000-0000-0000-000000000001",
+          "name": "DHW",
+          "zoneType": "DHW",
+          "dhwZoneMode": "Scheduling",
+          "dhwStatus": "ProducingHeat",
+          "capabilityBoostMode": true,
+          "dhwTemperature": 47.5,
+          "targetSetpoint": 55.0,
+          "reducedSetpoint": 40.0,
+          "comfortSetPoint": 55.0,
+          "setPointMin": 40.0,
+          "setPointMax": 65.0,
+          "setPointRanges": {
+            "comfortSetpointMin": 40.0,
+            "comfortSetpointMax": 65.0,
+            "reducedSetpointMin": 10.0,
+            "reducedSetpointMax": 60.0
+          },
+          "boostModeEndTime": null,
+          "nextSwitchTime": "2026-11-05T21:00:00Z"
+        }
+      ],
+      "climateZones": [
+        {
+          "climateZoneId": "c0000000-0000-0000-0000-000000000001",
+          "applianceId": "a0000000-0000-0000-0000-000000000001",
+          "name": "Salón",
+          "zoneType": "CH",
+          "activeComfortDemand": "ProducingHeat",
+          "zoneMode": "Scheduling",
+          "controlStrategy": "RoomTemperatureOnly",
+          "firePlaceModeActive": false,
+          "capabilityFirePlaceMode": true,
+          "roomTemperature": 19.8,
+          "setPoint": 20.5,
+          "nextSetpoint": 17.0,
+          "nextSwitchTime": "2026-11-05T22:00:00Z",
+          "setPointMin": 5.0,
+          "setPointMax": 30.0,
+          "currentScheduleSetPoint": 20.5,
+          "activeHeatingClimateTimeProgramNumber": 1,
+          "temporaryOverride": { "endTime": "0001-01-01T00:00:00Z" }
+        }
+      ]
+    }
+  ]
+}

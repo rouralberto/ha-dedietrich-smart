@@ -1,0 +1,145 @@
+# De Dietrich Smart for Home Assistant
+
+A Home Assistant integration for De Dietrich heating systems controlled by the **Smart TC** Wi-Fi room thermostat. It uses the account you already have in the **De Dietrich Smart** app.
+
+> [!WARNING]
+> **This was built for my own home. It may not work for yours.**
+>
+> - I wrote it to integrate *my* De Dietrich heat pump and *my* Smart TC thermostat into *my* Home Assistant, and it fits that setup.
+> - I'm open-sourcing it in case it helps someone with a similar system. It comes with **no guarantees and no support commitment**.
+> - Other heat pumps, boilers, hybrid systems, multiple zones or cooling setups may behave differently, or not work at all.
+> - It talks to an **unofficial, undocumented cloud API** that can change or break at any time.
+> - It is **not affiliated with, endorsed by or supported by De Dietrich or BDR Thermea**.
+> - It sends real commands to your heating. Use it at your own risk.
+
+## How it works
+
+The Smart TC has no local API. On my network, its Wi-Fi module has no open ports: it only keeps an outbound connection to BDR Thermea's cloud.
+
+This integration therefore talks to the same cloud API as the De Dietrich Smart app:
+- It signs in with your app email and password.
+- It polls your system once a minute.
+- It sends your commands the way the app does.
+
+BDR Thermea runs one backend for several brands, so Remeha Home, Baxi and Brötje accounts may work too. That's untested.
+
+If you want fully local control, the realistic route is hardware: read and write the heat pump controller over Modbus with an ESP32 running ESPHome. See [this community thread](https://community.home-assistant.io/t/baxi-remeha-dietrich-to-esp32-with-esphome/777548).
+
+## Requirements
+
+- **Home Assistant 2026.10 or newer.** It also supports the climate and water-heater changes in 2026.11.
+- Your system already set up and working in the **De Dietrich Smart** app. If the app can't control it, this integration can't either.
+
+## Installation
+
+### With HACS (recommended)
+
+1. In Home Assistant open **HACS**, then **⋮ → Custom repositories**.
+2. Add `https://github.com/rouralberto/ha-dedietrich-smart` with type **Integration**.
+3. Search for **De Dietrich Smart**, click **Download**, then **restart Home Assistant**.
+
+### Manually
+
+1. Copy the `custom_components/dedietrich` folder of this repository into your Home Assistant config folder, so that you end up with `<config>/custom_components/dedietrich/manifest.json`.
+2. Restart Home Assistant.
+
+## Setup
+
+1. Go to **Settings → Devices & services → Add integration** and pick **De Dietrich Smart**.
+2. Enter the email and password you use in the De Dietrich Smart app.
+
+**Where your password goes:**
+- The password is stored in Home Assistant's config entry storage (`.storage/core.config_entries`), the same place other integrations keep their credentials.
+- It's kept so the integration can sign in again when the cloud session expires.
+- If the password stops working (for example, you changed it in the app), Home Assistant shows a notification asking you to sign in again.
+
+## What you get
+
+The integration creates one device for the heat pump (the "appliance"), one for each thermostat zone, and one for hot water.
+
+| Device | Entities |
+|---|---|
+| **Thermostat** (each climate zone) | Climate entity, room temperature, current schedule setpoint, next setpoint and when it starts, heat demand, fireplace mode (if supported) |
+| **Hot water** | Water heater entity, water temperature, heating on/off, comfort temperature and eco temperature |
+| **Heat pump** | Outdoor temperature (from the appliance and from the weather service), water pressure and a pressure-problem sensor (if reported), operating mode, thermal mode, status, cloud connection, holiday mode, energy consumed/delivered today for heating and hot water, **COP today**, **seasonal efficiency (SCOP)** |
+
+Some entities only appear when your system reports them:
+- Cooling energy sensors appear only if your system reports cooling.
+- Water pressure appears only if your system reports it.
+- SCOP appears only if a heat pump is listed among the energy producers.
+
+### Thermostat modes
+
+| Home Assistant | What it does |
+|---|---|
+| **Auto** | Follows the active clock program. Changing the temperature overrides the program **until its next switch time**. |
+| **Heat** | Holds the temperature you set until you change mode. |
+| **Off** | Frost protection only. |
+| Presets **Schedule 1–3** | Switches to one of the app's three clock programs, in Auto mode. |
+
+### Hot water modes
+
+| Mode | What it does |
+|---|---|
+| **Schedule** | Follows the hot water clock program |
+| **Comfort** | Always keeps the comfort temperature |
+| **Eco** | Always keeps the eco (reduced) temperature |
+| **Boost** | Heats to the comfort temperature once, right now (if your system supports it) |
+
+Setting the water heater's temperature changes the eco temperature while in Eco mode, and the comfort temperature otherwise.
+
+### Things to know
+
+- **Slow updates:** the cloud applies a command a few seconds after accepting it. Home Assistant shows the new state immediately, then checks again 8 seconds later. If the cloud didn't apply the command, the state goes back.
+- **Energy figures** come from the cloud's daily totals. They refresh every 15 minutes, lag behind reality by up to an hour, and reset at midnight. **COP today** is heat delivered ÷ electricity consumed, using those totals.
+- **Not supported (yet):**
+  - switching between heating and cooling
+  - editing clock programs
+  - the heating curve
+  - holiday mode (shown, but not settable)
+
+## Troubleshooting
+
+**Download diagnostics:** go to Settings → Devices & services → De Dietrich Smart → ⋮ → **Download diagnostics**.
+- You get the raw data the cloud sends for your system, with your email, password, tokens and serial numbers removed.
+- It's the most useful thing to attach to an issue, especially if your system differs from mine.
+
+**Debug logging:** add this to `configuration.yaml`:
+
+```yaml
+logger:
+  logs:
+    custom_components.dedietrich: debug
+```
+
+**Common problems:**
+- **"Wrong email or password"**: check that you can sign in to the De Dietrich Smart app with the same details.
+- **Entities unavailable**: the heat pump is offline in the cloud. Check the *Cloud connection* sensor and the app.
+
+Issues and pull requests are welcome. Remember the disclaimer, though: I can only test against my own system.
+
+## Development
+
+The tests run the integration inside a real Home Assistant (via [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component)) against a simulated cloud:
+
+```sh
+python3.14 -m venv .venv
+.venv/bin/pip install -r tests/requirements.txt
+.venv/bin/pytest
+```
+
+The code is laid out like this:
+
+| File | What it does |
+|---|---|
+| `api.py` | The cloud client: sign-in and token refresh, and one method per endpoint |
+| `coordinator.py` | Polling, plus applying commands and showing their effect |
+| Platform files | One file per entity type |
+
+## Credits
+
+The cloud API was reverse engineered by [msvisser/remeha_home](https://github.com/msvisser/remeha_home) and the community around its forks. This is an independent implementation that builds on their findings. Thank you!
+
+## License
+
+[MIT](LICENSE). "De Dietrich" is a trademark of its owner. It's used here only to say which systems this integration is for.

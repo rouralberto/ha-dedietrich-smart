@@ -1,0 +1,90 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "De Dietrich Smart",
+        "description": "Sign in with the email and password of the De Dietrich Smart app (Remeha Home and Baxi accounts work too).",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "The De Dietrich Smart login for {email} stopped working. Enter its current password.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong email or password.",
+      "cannot_connect": "Could not reach the De Dietrich cloud.",
+      "unknown": "Unexpected error, see the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This account is already set up.",
+      "reauth_successful": "Signed in again."
+    }
+  },
+  "entity": {
+    "climate": {
+      "zone": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "schedule_1": "Schedule 1",
+              "schedule_2": "Schedule 2",
+              "schedule_3": "Schedule 3"
+            }
+          }
+        }
+      }
+    },
+    "water_heater": {
+      "dhw": {
+        "state": {
+          "schedule": "Schedule",
+          "comfort": "Comfort",
+          "eco": "Eco",
+          "boost": "Boost"
+        }
+      }
+    },
+    "sensor": {
+      "outdoor_temperature": { "name": "Outdoor temperature" },
+      "weather_temperature": { "name": "Weather outdoor temperature" },
+      "water_pressure": { "name": "Water pressure" },
+      "thermal_mode": { "name": "Thermal mode" },
+      "operating_mode": { "name": "Operating mode" },
+      "status": { "name": "Status" },
+      "heating_consumed": { "name": "Heating energy consumed today" },
+      "heating_delivered": { "name": "Heating energy delivered today" },
+      "hotwater_consumed": { "name": "Hot water energy consumed today" },
+      "hotwater_delivered": { "name": "Hot water energy delivered today" },
+      "cooling_consumed": { "name": "Cooling energy consumed today" },
+      "cooling_delivered": { "name": "Cooling energy delivered today" },
+      "cop_today": { "name": "COP today" },
+      "seasonal_efficiency": { "name": "Seasonal efficiency (SCOP)" },
+      "room_temperature": { "name": "Room temperature" },
+      "schedule_setpoint": { "name": "Schedule setpoint" },
+      "next_setpoint": { "name": "Next setpoint" },
+      "next_switch_time": { "name": "Next setpoint time" },
+      "water_temperature": { "name": "Water temperature" }
+    },
+    "binary_sensor": {
+      "online": { "name": "Cloud connection" },
+      "holiday": { "name": "Holiday mode" },
+      "water_pressure_problem": { "name": "Water pressure" },
+      "demand": { "name": "Heat demand" },
+      "dhw_heating": { "name": "Heating" }
+    },
+    "number": {
+      "dhw_comfort": { "name": "Comfort temperature" },
+      "dhw_reduced": { "name": "Eco temperature" }
+    },
+    "switch": {
+      "fireplace": { "name": "Fireplace mode" }
+    }
+  }
+}
