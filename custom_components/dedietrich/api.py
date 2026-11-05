@@ -38,6 +38,10 @@ class AuthError(Exception):
 class ApiError(Exception):
     """The API returned an error or could not be reached."""
 
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status  # HTTP status, if the API answered
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -222,7 +226,9 @@ class DeDietrichClient:
                         raise AuthError(f"{method} {path}: HTTP 401")
                     body = await resp.text()
                     if resp.status >= 400:
-                        raise ApiError(f"{method} {path}: HTTP {resp.status} {body[:300]}")
+                        raise ApiError(
+                            f"{method} {path}: HTTP {resp.status} {body[:300]}", resp.status
+                        )
                     # Commands answer with an empty body.
                     return json.loads(body) if body.strip() else None
             except (aiohttp.ClientError, TimeoutError, ValueError) as err:
@@ -249,7 +255,28 @@ class DeDietrichClient:
             params={"startDate": start, "endDate": end},
         )
 
+    # --- heat pump ---------------------------------------------------------------
+
+    async def set_operating_mode(self, appliance_id: str, mode: str) -> None:
+        """mode: AutomaticCoolingHeating | AutomaticHeating | ForcedCooling | Off."""
+        await self.request(
+            "POST",
+            f"/appliances/{appliance_id}/operatingmode",
+            json_body={"operatingMode": mode},
+        )
+
     # --- climate zones (the Smart TC thermostat) -----------------------------
+
+    async def heating_curve(self, zone_id: str) -> dict:
+        return await self.request("GET", f"/climate-zones/{zone_id}/heating-curve")
+
+    async def set_heating_curve(self, zone_id: str, slope: float, base_setpoint: float) -> None:
+        """The API requires both values on every write."""
+        await self.request(
+            "POST",
+            f"/climate-zones/{zone_id}/heating-curve",
+            json_body={"slope": slope, "baseSetpoint": base_setpoint},
+        )
 
     async def zone_schedule(self, zone_id: str, program: int) -> None:
         await self.request(

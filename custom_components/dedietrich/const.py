@@ -28,5 +28,7 @@ SCOPE = (
 UPDATE_INTERVAL = timedelta(seconds=60)
 # Energy figures only change every hour or so; don't ask for them every poll.
 ENERGY_INTERVAL = timedelta(minutes=15)
+# Heating curves are settings: they only change when someone edits them.
+HEATING_CURVE_INTERVAL = timedelta(minutes=15)
 # The cloud applies a command to the dashboard a few seconds after accepting it.
 REFRESH_AFTER_COMMAND = 8

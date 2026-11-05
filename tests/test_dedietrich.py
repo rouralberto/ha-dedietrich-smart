@@ -61,6 +61,11 @@ ENERGY = {
     ]
 }
 TOKEN = {"access_token": "a", "refresh_token": "r", "expires_at": 9e12}
+HEATING_CURVE = {
+    "slope": 1.5, "minimumSlope": 0.0, "maximumSlope": 4.0, "incrementSlope": 0.1,
+    "baseSetpoint": 15.0, "minimumBaseSetpoint": 15.0, "maximumBaseSetpoint": 35.0,
+    "incrementBaseSetpoint": 0.5, "maxFlowTemperature": 35.0,
+}
 
 
 class FakeCloud:
@@ -70,10 +75,21 @@ class FakeCloud:
         self.dashboard = copy.deepcopy(DASHBOARD)
         self.calls: list[tuple] = []
         self.fail: Exception | None = None
+        self.curves = {z["climateZoneId"]: dict(HEATING_CURVE)
+                       for z in self.dashboard["appliances"][0]["climateZones"]}
+        self.curve_reads = 0
 
     async def request(self, method, path, *, json_body=None, params=None):
         if self.fail:
             raise self.fail
+        if path.endswith("/heating-curve"):
+            zone_id = path.split("/")[2]
+            if zone_id not in self.curves:
+                raise ApiError(f"{method} {path}: HTTP 404", 404)
+            if method == "GET":
+                self.curve_reads += 1
+                return dict(self.curves[zone_id])
+            self.curves[zone_id].update(json_body)  # the real cloud applies it at once
         if method == "GET":
             if path == "/homes/dashboard":
                 return copy.deepcopy(self.dashboard)
@@ -97,8 +113,7 @@ def cloud():
         yield fake
 
 
-@pytest.fixture
-async def entry(hass: HomeAssistant, cloud: FakeCloud) -> MockConfigEntry:
+async def setup_entry(hass: HomeAssistant) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="me@example.com",
@@ -108,6 +123,16 @@ async def entry(hass: HomeAssistant, cloud: FakeCloud) -> MockConfigEntry:
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
+
+
+@pytest.fixture
+async def entry(hass: HomeAssistant, cloud: FakeCloud) -> MockConfigEntry:
+    return await setup_entry(hass)
+
+
+async def later(hass: HomeAssistant, seconds: int) -> None:
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=seconds))
+    await hass.async_block_till_done()
 
 
 def eid(hass: HomeAssistant, platform: str, unique_id: str) -> str:
@@ -275,6 +300,84 @@ async def test_hot_water_commands(hass: HomeAssistant, entry, cloud: FakeCloud) 
 
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=10))
     await hass.async_block_till_done()
+
+
+async def test_heating_curve(hass: HomeAssistant, entry, cloud: FakeCloud) -> None:
+    slope = eid(hass, "number", f"{ZONE}_heating_curve_slope")
+    base = eid(hass, "number", f"{ZONE}_heating_curve_base")
+    attrs = hass.states.get(slope).attributes
+    assert hass.states.get(slope).state == "1.5"
+    assert (attrs["min"], attrs["max"], attrs["step"]) == (0.0, 4.0, 0.1)
+    assert hass.states.get(base).state == "15.0"
+    assert hass.states.get(base).attributes["unit_of_measurement"] == "°C"
+    assert state(hass, "sensor", f"{ZONE}_max_flow_temperature").state == "35.0"
+    # Every circuit has its own curve, including the one without a thermostat.
+    assert state(hass, "number", f"{CIRCUIT}_heating_curve_slope").state == "1.5"
+
+    # Both values go into every write; the one not being changed keeps its value.
+    await call(hass, "number", "set_value", slope, value=1.2000000000000002)
+    assert cloud.calls[-1] == ("POST", f"/climate-zones/{ZONE}/heating-curve",
+                               {"slope": 1.2, "baseSetpoint": 15.0})
+    assert hass.states.get(slope).state == "1.2"
+    await call(hass, "number", "set_value", base, value=20)
+    assert cloud.calls[-1] == ("POST", f"/climate-zones/{ZONE}/heating-curve",
+                               {"slope": 1.2, "baseSetpoint": 20.0})
+
+    # After a change the curve is read again on the next poll, which confirms it.
+    reads = cloud.curve_reads
+    await later(hass, 10)
+    assert cloud.curve_reads == reads + 1
+    assert (hass.states.get(slope).state, hass.states.get(base).state) == ("1.2", "20.0")
+    # Otherwise it's only read every 15 minutes, not on every one-minute poll.
+    await later(hass, 70)
+    assert cloud.curve_reads == reads + 1
+
+
+async def test_zone_without_heating_curve(hass: HomeAssistant, cloud: FakeCloud, freezer) -> None:
+    del cloud.curves[CIRCUIT]
+    await setup_entry(hass)
+    registry = er.async_get(hass)
+    assert not registry.async_get_entity_id("number", DOMAIN, f"{CIRCUIT}_heating_curve_slope")
+    assert not registry.async_get_entity_id("sensor", DOMAIN, f"{CIRCUIT}_max_flow_temperature")
+    assert registry.async_get_entity_id("number", DOMAIN, f"{ZONE}_heating_curve_slope")
+    # A 404 means "no heating curve here": not asked again on later polls.
+    reads = cloud.curve_reads
+    freezer.tick(timedelta(minutes=16))
+    await later(hass, 0)
+    assert cloud.curve_reads == reads + 1  # only ZONE's 15-minute refresh
+
+
+async def test_heating_cooling(hass: HomeAssistant, entry, cloud: FakeCloud) -> None:
+    select = eid(hass, "select", f"{APPLIANCE}_heating_cooling")
+    climate = eid(hass, "climate", ZONE)
+    assert hass.states.get(select).state == "auto"
+    assert hass.states.get(select).attributes["options"] == ["auto", "heating", "cooling"]
+    assert hass.states.get(climate).attributes["hvac_modes"] == ["auto", "heat", "off"]
+
+    await call(hass, "select", "select_option", select, option="cooling")
+    assert cloud.calls[-1] == ("POST", f"/appliances/{APPLIANCE}/operatingmode",
+                               {"operatingMode": "ForcedCooling"})
+    assert hass.states.get(select).state == "cooling"
+    # While cooling, the fixed-temperature mode is Cool instead of Heat.
+    assert hass.states.get(climate).attributes["hvac_modes"] == ["auto", "cool", "off"]
+    await call(hass, "climate", "set_hvac_mode", climate, hvac_mode="cool")
+    assert cloud.calls[-1] == ("POST", f"/climate-zones/{ZONE}/modes/manual",
+                               {"roomTemperatureSetPoint": 20.5})
+    assert hass.states.get(climate).state == "cool"
+
+    await call(hass, "select", "select_option", select, option="heating")
+    assert cloud.calls[-1] == ("POST", f"/appliances/{APPLIANCE}/operatingmode",
+                               {"operatingMode": "AutomaticHeating"})
+    assert hass.states.get(climate).state == "heat"
+    await later(hass, 10)
+
+
+async def test_heat_only_system_has_no_cooling_switch(hass: HomeAssistant, cloud: FakeCloud) -> None:
+    cloud.dashboard["appliances"][0].update(capabilityCooling=False, operatingMode="AutomaticHeating")
+    await setup_entry(hass)
+    assert not er.async_get(hass).async_get_entity_id(
+        "select", DOMAIN, f"{APPLIANCE}_heating_cooling")
+    assert state(hass, "climate", ZONE).attributes["hvac_modes"] == ["auto", "heat", "off"]
 
 
 async def test_rejected_command(hass: HomeAssistant, entry, cloud: FakeCloud) -> None:

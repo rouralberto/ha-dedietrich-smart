@@ -178,6 +178,15 @@ SENSORS: tuple[DeDietrichSensorDescription, ...] = (
         **_temp(),
     ),
     DeDietrichSensorDescription(
+        key="max_flow_temperature",
+        translation_key="max_flow_temperature",
+        kind="climate_zone",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda z: dig(z, "_heating_curve.maxFlowTemperature"),
+        exists_fn=_has("_heating_curve.maxFlowTemperature"),
+        **_temp(),
+    ),
+    DeDietrichSensorDescription(
         key="next_switch_time",
         translation_key="next_switch_time",
         kind="climate_zone",

@@ -53,11 +53,14 @@ async def async_setup_entry(
 
 class ZoneClimate(DeDietrichEntity, ClimateEntity):
     """AUTO follows the clock program (changing the temperature overrides it until the
-    next switch), HEAT holds a fixed temperature, OFF is frost protection."""
+    next switch), HEAT holds a fixed temperature, OFF is frost protection.
+
+    While the heat pump is in forced cooling (see select.py), the fixed-temperature mode
+    is shown and set as COOL instead of HEAT: it's the same zone mode, but cooling.
+    """
 
     _attr_name = None
     _attr_translation_key = "zone"
-    _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_preset_modes = list(PRESETS)
     _attr_precision = PRECISION_TENTHS
     _attr_target_temperature_step = 0.5
@@ -72,9 +75,20 @@ class ZoneClimate(DeDietrichEntity, ClimateEntity):
     else:
         _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
+    @property
+    def _fixed_mode(self) -> HVACMode:
+        """What "hold a fixed temperature" means right now: heating or cooling."""
+        if self.appliance.get("operatingMode") == "ForcedCooling":
+            return HVACMode.COOL
+        return HVACMode.HEAT
+
     def _update_attrs(self) -> None:
         zone = self.item
+        fixed = self._fixed_mode
+        self._attr_hvac_modes = [HVACMode.AUTO, fixed, HVACMode.OFF]
         mode = ZONE_MODE_TO_HVAC.get(zone.get("zoneMode"))
+        if mode == HVACMode.HEAT:
+            mode = fixed
         program = zone.get("activeHeatingClimateTimeProgramNumber")
         self._attr_hvac_mode = mode
         self._attr_hvac_action = (
@@ -127,7 +141,7 @@ class ZoneClimate(DeDietrichEntity, ClimateEntity):
                 client.zone_schedule(self.item_id, program),
                 zone, zoneMode="Scheduling", setPoint=zone.get("currentScheduleSetPoint"),
             )
-        elif hvac_mode == HVACMode.HEAT:
+        elif hvac_mode in (HVACMode.HEAT, HVACMode.COOL):
             setpoint = (
                 zone.get("currentScheduleSetPoint")
                 if self.hvac_mode == HVACMode.OFF

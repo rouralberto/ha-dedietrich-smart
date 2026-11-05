@@ -16,7 +16,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .api import ApiError, AuthError, DeDietrichClient
-from .const import DOMAIN, ENERGY_INTERVAL, REFRESH_AFTER_COMMAND, UPDATE_INTERVAL
+from .const import (
+    DOMAIN,
+    ENERGY_INTERVAL,
+    HEATING_CURVE_INTERVAL,
+    REFRESH_AFTER_COMMAND,
+    UPDATE_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,9 +31,10 @@ _LOGGER = logging.getLogger(__name__)
 class DeDietrichData:
     """One poll of the dashboard, indexed by id.
 
-    The dicts are the API's own JSON objects. Appliances also carry two extra keys:
-    "_technical" (gateway / model details) and "_energy" (today's energy figures, or
-    None if not fetched yet).
+    The dicts are the API's own JSON objects, plus a few keys of our own:
+    appliances carry "_technical" (gateway / model details) and "_energy" (today's
+    energy figures, or None if not fetched yet); climate zones carry "_heating_curve"
+    (None if the zone has none or it wasn't fetched yet).
     """
 
     appliances: dict[str, dict] = field(default_factory=dict)
@@ -36,7 +43,7 @@ class DeDietrichData:
 
 
 class DeDietrichCoordinator(DataUpdateCoordinator[DeDietrichData]):
-    """Fetches the dashboard every minute and today's energy every 15 minutes."""
+    """Fetches the dashboard every minute; energy and heating curves every 15 minutes."""
 
     config_entry: ConfigEntry
 
@@ -54,6 +61,9 @@ class DeDietrichCoordinator(DataUpdateCoordinator[DeDietrichData]):
         self._technical: dict[str, dict] = {}
         self._energy: dict[str, dict] = {}
         self._energy_at: dict[str, datetime] = {}
+        self._curves: dict[str, dict] = {}
+        self._curve_at: dict[str, datetime] = {}
+        self._no_curve: set[str] = set()
         self._refresh_soon: CALLBACK_TYPE | None = None
         # appliance id -> device registry id, so zone devices can link to their heat pump.
         self.appliance_device_ids: dict[str, str] = {}
@@ -90,7 +100,10 @@ class DeDietrichCoordinator(DataUpdateCoordinator[DeDietrichData]):
 
             data.appliances[appliance_id] = appliance
             for zone in appliance.get("climateZones") or []:
-                data.climate_zones[zone["climateZoneId"]] = zone
+                zone_id = zone["climateZoneId"]
+                await self._update_heating_curve(zone_id, now)
+                zone["_heating_curve"] = self._curves.get(zone_id)
+                data.climate_zones[zone_id] = zone
             for zone in appliance.get("hotWaterZones") or []:
                 data.hot_water_zones[zone["hotWaterZoneId"]] = zone
 
@@ -110,6 +123,25 @@ class DeDietrichCoordinator(DataUpdateCoordinator[DeDietrichData]):
         # No row yet just after midnight: report zero so the daily totals reset.
         self._energy[appliance_id] = rows[0] if rows else {}
         self._energy_at[appliance_id] = now
+
+    async def _update_heating_curve(self, zone_id: str, now: datetime) -> None:
+        last = self._curve_at.get(zone_id)
+        if zone_id in self._no_curve or (last and now - last < HEATING_CURVE_INTERVAL):
+            return
+        try:
+            self._curves[zone_id] = await self.client.heating_curve(zone_id)
+        except ApiError as err:
+            if zone_id not in self._curves and err.status and 400 <= err.status < 500:
+                _LOGGER.debug("Zone %s has no heating curve: %s", zone_id, err)
+                self._no_curve.add(zone_id)
+            else:
+                _LOGGER.warning("No heating curve for %s: %s", zone_id, err)
+            return
+        self._curve_at[zone_id] = now
+
+    def refetch_heating_curve(self, zone_id: str) -> None:
+        """Read the heating curve again on the next poll (after changing it)."""
+        self._curve_at.pop(zone_id, None)
 
     async def async_command(
         self, command: Awaitable[Any], item: dict | None = None, **changes: Any

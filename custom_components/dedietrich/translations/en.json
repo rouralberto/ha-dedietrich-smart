@@ -52,39 +52,112 @@
       }
     },
     "sensor": {
-      "outdoor_temperature": { "name": "Outdoor temperature" },
-      "weather_temperature": { "name": "Weather outdoor temperature" },
-      "water_pressure": { "name": "Water pressure" },
-      "thermal_mode": { "name": "Thermal mode" },
-      "operating_mode": { "name": "Operating mode" },
-      "status": { "name": "Status" },
-      "heating_consumed": { "name": "Heating energy consumed today" },
-      "heating_delivered": { "name": "Heating energy delivered today" },
-      "hotwater_consumed": { "name": "Hot water energy consumed today" },
-      "hotwater_delivered": { "name": "Hot water energy delivered today" },
-      "cooling_consumed": { "name": "Cooling energy consumed today" },
-      "cooling_delivered": { "name": "Cooling energy delivered today" },
-      "cop_today": { "name": "COP today" },
-      "seasonal_efficiency": { "name": "Seasonal efficiency (SCOP)" },
-      "room_temperature": { "name": "Room temperature" },
-      "schedule_setpoint": { "name": "Schedule setpoint" },
-      "next_setpoint": { "name": "Next setpoint" },
-      "next_switch_time": { "name": "Next setpoint time" },
-      "water_temperature": { "name": "Water temperature" }
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "weather_temperature": {
+        "name": "Weather outdoor temperature"
+      },
+      "water_pressure": {
+        "name": "Water pressure"
+      },
+      "thermal_mode": {
+        "name": "Thermal mode"
+      },
+      "operating_mode": {
+        "name": "Operating mode"
+      },
+      "status": {
+        "name": "Status"
+      },
+      "heating_consumed": {
+        "name": "Heating energy consumed today"
+      },
+      "heating_delivered": {
+        "name": "Heating energy delivered today"
+      },
+      "hotwater_consumed": {
+        "name": "Hot water energy consumed today"
+      },
+      "hotwater_delivered": {
+        "name": "Hot water energy delivered today"
+      },
+      "cooling_consumed": {
+        "name": "Cooling energy consumed today"
+      },
+      "cooling_delivered": {
+        "name": "Cooling energy delivered today"
+      },
+      "cop_today": {
+        "name": "COP today"
+      },
+      "seasonal_efficiency": {
+        "name": "Seasonal efficiency (SCOP)"
+      },
+      "room_temperature": {
+        "name": "Room temperature"
+      },
+      "schedule_setpoint": {
+        "name": "Schedule setpoint"
+      },
+      "next_setpoint": {
+        "name": "Next setpoint"
+      },
+      "next_switch_time": {
+        "name": "Next setpoint time"
+      },
+      "water_temperature": {
+        "name": "Water temperature"
+      },
+      "max_flow_temperature": {
+        "name": "Maximum flow temperature"
+      }
     },
     "binary_sensor": {
-      "online": { "name": "Cloud connection" },
-      "holiday": { "name": "Holiday mode" },
-      "water_pressure_problem": { "name": "Water pressure" },
-      "demand": { "name": "Heat demand" },
-      "dhw_heating": { "name": "Heating" }
+      "online": {
+        "name": "Cloud connection"
+      },
+      "holiday": {
+        "name": "Holiday mode"
+      },
+      "water_pressure_problem": {
+        "name": "Water pressure"
+      },
+      "demand": {
+        "name": "Heat demand"
+      },
+      "dhw_heating": {
+        "name": "Heating"
+      }
     },
     "number": {
-      "dhw_comfort": { "name": "Comfort temperature" },
-      "dhw_reduced": { "name": "Eco temperature" }
+      "dhw_comfort": {
+        "name": "Comfort temperature"
+      },
+      "dhw_reduced": {
+        "name": "Eco temperature"
+      },
+      "heating_curve_slope": {
+        "name": "Heating curve slope"
+      },
+      "heating_curve_base": {
+        "name": "Heating curve base temperature"
+      }
     },
     "switch": {
-      "fireplace": { "name": "Fireplace mode" }
+      "fireplace": {
+        "name": "Fireplace mode"
+      }
+    },
+    "select": {
+      "heating_cooling": {
+        "name": "Heating/cooling",
+        "state": {
+          "auto": "Automatic",
+          "heating": "Heating only",
+          "cooling": "Cooling only"
+        }
+      }
     }
   }
 }

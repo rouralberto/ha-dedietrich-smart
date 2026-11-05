@@ -72,14 +72,15 @@ The integration creates one device for the heat pump (the "appliance"), one for 
 
 | Device | Entities |
 |---|---|
-| **Thermostat** (each climate zone) | Climate entity, room temperature, current schedule setpoint, next setpoint and when it starts, heat demand, fireplace mode (if supported) |
+| **Thermostat** (each climate zone) | Climate entity, room temperature, current schedule setpoint, next setpoint and when it starts, heat demand, fireplace mode (if supported), **heating curve** slope and base temperature, maximum flow temperature |
 | **Hot water** | Water heater entity, water temperature, heating on/off, comfort temperature and eco temperature |
-| **Heat pump** | Outdoor temperature (from the appliance and from the weather service), water pressure and a pressure-problem sensor (if reported), operating mode, thermal mode, status, cloud connection, holiday mode, energy consumed/delivered today for heating and hot water, **COP today**, **seasonal efficiency (SCOP)** |
+| **Heat pump** | **Heating/cooling mode** (if your system can cool), outdoor temperature (from the appliance and from the weather service), water pressure and a pressure-problem sensor (if reported), operating mode, thermal mode, status, cloud connection, holiday mode, energy consumed/delivered today for heating and hot water, **COP today**, **seasonal efficiency (SCOP)** |
 
 A **heating circuit without its own thermostat** still gets a climate entity, so you can set its mode and schedule. It shows up as a *Heating circuit* device, without the room temperature sensor or fireplace mode.
 
 Some entities only appear when your system reports them:
-- Cooling energy sensors appear only if your system reports cooling.
+- The heating/cooling mode and cooling energy sensors appear only if your system reports cooling.
+- The heating curve appears only on zones where the cloud has one.
 - Water pressure appears only if your system reports it.
 - SCOP appears only if a heat pump is listed among the energy producers.
 
@@ -88,9 +89,32 @@ Some entities only appear when your system reports them:
 | Home Assistant | What it does |
 |---|---|
 | **Auto** | Follows the active clock program. Changing the temperature overrides the program **until its next switch time**. |
-| **Heat** | Holds the temperature you set until you change mode. |
+| **Heat** (**Cool** while the heat pump is in *Cooling only*) | Holds the temperature you set until you change mode. |
 | **Off** | Frost protection only. |
 | Presets **Schedule 1–3** | Switches to one of the app's three clock programs, in Auto mode. |
+
+### Heating/cooling mode
+
+This applies to the whole heat pump, so every zone follows it.
+
+| Option | What it does |
+|---|---|
+| **Automatic** | Heats or cools as the season requires. This is the usual setting. |
+| **Heating only** | Never cools. |
+| **Cooling only** | Cools. The climate entities then offer **Cool** instead of **Heat**. |
+
+The cloud also has an *Off* mode that switches off the whole heat pump. I left it out on purpose: you can turn each zone off from its climate entity.
+
+### Heating curve
+
+On a heat pump the heating curve matters a lot: it sets how warm the water sent to a circuit is, depending on the outdoor temperature.
+- **Slope:** how much warmer the water gets as it gets colder outside.
+- **Base temperature:** the flow temperature the curve starts from.
+
+A lower curve means a better COP, but a steeper one is needed if the house can't keep up when it's cold. Each circuit has its own curve, including circuits without a thermostat. Both are configuration entities, so they appear under the device's *Configuration* section.
+
+> [!CAUTION]
+> These change your installer's settings. Write down the current values before you touch them, and change them in small steps.
 
 ### Hot water modes
 
@@ -107,10 +131,12 @@ Setting the water heater's temperature changes the eco temperature while in Eco 
 
 - **Slow updates:** the cloud applies a command a few seconds after accepting it. Home Assistant shows the new state immediately, then checks again 8 seconds later. If the cloud didn't apply the command, the state goes back.
 - **Energy figures** come from the cloud's daily totals. They refresh every 15 minutes, lag behind reality by up to an hour, and reset at midnight. **COP today** is heat delivered ÷ electricity consumed, using those totals.
+- **What has been tested live on the reference system:**
+  - Switching between *Automatic* and *Heating only*.
+  - Writing the heating curve: the API accepted a write of its current values.
+  - *Cooling only* has **not** been tried yet, because these features were added in November. It uses the value that the API accepts and that other heat pump users use.
 - **Not supported (yet):**
-  - switching between heating and cooling
   - editing clock programs
-  - the heating curve
   - holiday mode (shown, but not settable)
 
 ## Troubleshooting
