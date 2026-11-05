@@ -34,12 +34,13 @@ DASHBOARD = json.loads(
 )
 APPLIANCE = "a0000000-0000-0000-0000-000000000001"
 ZONE = "c0000000-0000-0000-0000-000000000001"
+CIRCUIT = "c0000000-0000-0000-0000-000000000002"  # no room unit
 DHW = "d0000000-0000-0000-0000-000000000001"
 TECHNICAL = {
-    "applianceName": "Alezio S V3",
+    "applianceName": "IDU2WH",
     "internetConnectedGateways": [
-        {"name": "Smart TC", "hardwareVersion": "2", "softwareVersion": "1.6.0",
-         "serialNumber": "SN123"}
+        {"deviceTypeName": "RU2", "name": "RU2", "hardwareVersion": "9",
+         "softwareVersion": "2.28.6", "serialNumber": "SN123", "controlledZoneName": None}
     ],
 }
 ENERGY = {
@@ -165,14 +166,29 @@ async def test_entities(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     assert state(hass, "number", f"{DHW}_dhw_comfort").state == "55.0"
     assert state(hass, "number", f"{DHW}_dhw_reduced").state == "40.0"
 
-    # No cooling capability -> no cooling energy sensors.
-    registry = er.async_get(hass)
-    assert not registry.async_get_entity_id("sensor", DOMAIN, f"{APPLIANCE}_coolingEnergyConsumed")
+    # The appliance can cool -> cooling energy sensors.
+    assert state(hass, "sensor", f"{APPLIANCE}_coolingEnergyConsumed").state == "0.0"
 
     devices = dr.async_get(hass)
     thermostat = devices.async_get_device_by_identifier((DOMAIN, ZONE), entry.entry_id)
-    assert (thermostat.model, thermostat.sw_version) == ("Smart TC", "1.6.0")
-    assert devices.async_get(thermostat.via_device_id).name == "Alezio S V3"
+    assert (thermostat.model, thermostat.sw_version) == ("RU2", "2.28.6")
+    assert devices.async_get(thermostat.via_device_id).name == "IDU2WH"
+
+
+async def test_circuit_without_room_unit(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    """A heating circuit without its own thermostat: controllable, but no room readings."""
+    climate = state(hass, "climate", CIRCUIT)
+    assert climate.state == "off"
+    assert climate.attributes["current_temperature"] is None
+    assert state(hass, "sensor", f"{CIRCUIT}_next_setpoint").state == "17.0"
+
+    registry = er.async_get(hass)
+    assert not registry.async_get_entity_id("sensor", DOMAIN, f"{CIRCUIT}_room_temperature")
+    assert not registry.async_get_entity_id("switch", DOMAIN, f"{CIRCUIT}_fireplace")
+
+    circuit = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, CIRCUIT), entry.entry_id)
+    assert (circuit.model, circuit.sw_version, circuit.serial_number) == (
+        "Heating circuit", None, None)
 
 
 async def test_offline_appliance(hass: HomeAssistant, entry, cloud: FakeCloud) -> None:

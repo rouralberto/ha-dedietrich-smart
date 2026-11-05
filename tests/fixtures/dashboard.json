@@ -8,8 +8,8 @@
       "pairingStatus": "Paired",
       "houseName": "Home",
       "errorStatus": "Running",
-      "activeThermalMode": "Heating",
-      "operatingMode": "AutomaticHeating",
+      "activeThermalMode": "HeatingCH",
+      "operatingMode": "AutomaticCoolingHeating",
       "outdoorTemperatureInformation": {
         "outdoorTemperatureSource": "Wired",
         "applianceOutdoorTemperature": 9.5,
@@ -24,7 +24,7 @@
       "waterPressure": 1.7,
       "waterPressureOK": true,
       "capabilityEnergyConsumption": true,
-      "capabilityCooling": false,
+      "capabilityCooling": true,
       "hotWaterZones": [
         {
           "hotWaterZoneId": "d0000000-0000-0000-0000-000000000001",
@@ -69,9 +69,36 @@
           "setPointMax": 30.0,
           "currentScheduleSetPoint": 20.5,
           "activeHeatingClimateTimeProgramNumber": 1,
-          "temporaryOverride": { "endTime": "0001-01-01T00:00:00Z" }
+          "temporaryOverride": {
+            "endTime": "0001-01-01T00:00:00Z"
+          },
+          "capabilityCooling": true
+        },
+        {
+          "climateZoneId": "c0000000-0000-0000-0000-000000000002",
+          "applianceId": "a0000000-0000-0000-0000-000000000001",
+          "name": "Sótano",
+          "zoneType": "CH",
+          "activeComfortDemand": "Idle",
+          "zoneMode": "FrostProtection",
+          "controlStrategy": "Automatic",
+          "firePlaceModeActive": false,
+          "capabilityFirePlaceMode": true,
+          "roomTemperature": null,
+          "setPoint": 6.0,
+          "nextSetpoint": 17.0,
+          "nextSwitchTime": "2026-11-05T22:00:00Z",
+          "setPointMin": 5.0,
+          "setPointMax": 30.0,
+          "currentScheduleSetPoint": 20.5,
+          "activeHeatingClimateTimeProgramNumber": 1,
+          "temporaryOverride": {
+            "endTime": "0001-01-01T00:00:00Z"
+          },
+          "capabilityCooling": false
         }
-      ]
+      ],
+      "seasonalMode": "Winter"
     }
   ]
 }

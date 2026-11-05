@@ -45,6 +45,25 @@ def appliance_device_info(coordinator: DeDietrichCoordinator, appliance_id: str)
     )
 
 
+def has_room_sensor(zone: dict) -> bool:
+    """Whether a thermostat measures this zone (circuits without one report null)."""
+    return zone.get("roomTemperature") is not None
+
+
+def _room_unit(data, zone: dict) -> dict | None:
+    """The internet gateway (the Smart TC, reported as e.g. "RU2") if it is this zone's
+    thermostat, else None. One gateway serves the whole system but sits in one zone."""
+    gateways = (data.appliances[zone["applianceId"]].get("_technical") or {}).get(
+        "internetConnectedGateways"
+    ) or []
+    named = [g for g in gateways if g.get("controlledZoneName")]
+    if named:
+        return next((g for g in named if g["controlledZoneName"] == zone.get("name")), None)
+    if not has_room_sensor(zone):
+        return None
+    return gateways[0] if gateways else {}
+
+
 def _device_info(coordinator: DeDietrichCoordinator, kind: Kind, item_id: str) -> DeviceInfo:
     data = coordinator.data
     if kind == "appliance":
@@ -52,10 +71,19 @@ def _device_info(coordinator: DeDietrichCoordinator, kind: Kind, item_id: str) -
 
     if kind == "climate_zone":
         zone = data.climate_zones[item_id]
-        gateways = (data.appliances[zone["applianceId"]].get("_technical") or {}).get(
-            "internetConnectedGateways"
-        ) or [{}]
-        gateway = gateways[0]
+        gateway = _room_unit(data, zone)
+        if gateway is None:
+            # A heating circuit run on the heating curve alone, without a thermostat.
+            return DeviceInfo(
+                identifiers={(DOMAIN, item_id)},
+                manufacturer=MANUFACTURER,
+                name=zone.get("name") or "Heating circuit",
+                model="Heating circuit",
+                hw_version=None,
+                sw_version=None,
+                serial_number=None,
+                via_device_id=coordinator.appliance_device_ids.get(zone["applianceId"]),
+            )
         return DeviceInfo(
             identifiers={(DOMAIN, item_id)},
             manufacturer=MANUFACTURER,

@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeDietrichConfigEntry
-from .entity import DeDietrichEntity
+from .entity import DeDietrichEntity, has_room_sensor
 
 
 async def async_setup_entry(
@@ -22,7 +22,8 @@ async def async_setup_entry(
     async_add_entities(
         FireplaceMode(coordinator, "climate_zone", zone_id, "fireplace")
         for zone_id, zone in coordinator.data.climate_zones.items()
-        if zone.get("capabilityFirePlaceMode")
+        # Fireplace mode ignores the room temperature: pointless where there is none.
+        if zone.get("capabilityFirePlaceMode") and has_room_sensor(zone)
     )
 
 

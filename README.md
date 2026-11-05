@@ -25,6 +25,19 @@ BDR Thermea runs one backend for several brands, so Remeha Home, Baxi and Brötj
 
 If you want fully local control, the realistic route is hardware: read and write the heat pump controller over Modbus with an ESP32 running ESPHome. See [this community thread](https://community.home-assistant.io/t/baxi-remeha-dietrich-to-esp32-with-esphome/777548).
 
+## The setup it runs on
+
+This is the one system the integration is known to work with: mine, in daily use since November 2026. Here's what the cloud reports for it:
+
+| Part | Reported as |
+|---|---|
+| Heat pump (indoor unit) | `IDU2WH`, air-source, heating and cooling capable |
+| Smart TC thermostat | gateway `RU2`, firmware 2.28.6 |
+| Heating circuits | three: one with the Smart TC in it, two without a thermostat (on the heating curve only) |
+| Hot water | storage tank, with boost |
+
+If yours differs, it may still work. Please [open an issue](https://github.com/rouralberto/ha-dedietrich-smart/issues) with your diagnostics either way.
+
 ## Requirements
 
 - **Home Assistant 2026.10 or newer.** It also supports the climate and water-heater changes in 2026.11.
@@ -62,6 +75,8 @@ The integration creates one device for the heat pump (the "appliance"), one for 
 | **Thermostat** (each climate zone) | Climate entity, room temperature, current schedule setpoint, next setpoint and when it starts, heat demand, fireplace mode (if supported) |
 | **Hot water** | Water heater entity, water temperature, heating on/off, comfort temperature and eco temperature |
 | **Heat pump** | Outdoor temperature (from the appliance and from the weather service), water pressure and a pressure-problem sensor (if reported), operating mode, thermal mode, status, cloud connection, holiday mode, energy consumed/delivered today for heating and hot water, **COP today**, **seasonal efficiency (SCOP)** |
+
+A **heating circuit without its own thermostat** still gets a climate entity, so you can set its mode and schedule. It shows up as a *Heating circuit* device, without the room temperature sensor or fireplace mode.
 
 Some entities only appear when your system reports them:
 - Cooling energy sensors appear only if your system reports cooling.

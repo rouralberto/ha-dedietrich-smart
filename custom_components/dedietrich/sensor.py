@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeDietrichConfigEntry
-from .entity import DeDietrichEntity, Kind, dig, parse_time
+from .entity import DeDietrichEntity, Kind, dig, has_room_sensor, parse_time
 
 ENERGY_KEYS = ("heating", "hotWater", "cooling")
 
@@ -160,6 +160,7 @@ SENSORS: tuple[DeDietrichSensorDescription, ...] = (
         kind="climate_zone",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda z: z.get("roomTemperature"),
+        exists_fn=has_room_sensor,
         **_temp(),
     ),
     DeDietrichSensorDescription(
