@@ -21,6 +21,7 @@ from .const import (
     ENERGY_INTERVAL,
     HEATING_CURVE_INTERVAL,
     REFRESH_AFTER_COMMAND,
+    STALE_DATA_GRACE,
     UPDATE_INTERVAL,
 )
 
@@ -65,16 +66,47 @@ class DeDietrichCoordinator(DataUpdateCoordinator[DeDietrichData]):
         self._curve_at: dict[str, datetime] = {}
         self._no_curve: set[str] = set()
         self._refresh_soon: CALLBACK_TYPE | None = None
+        self._last_success: datetime | None = None
+        self._serving_stale = False
         # appliance id -> device registry id, so zone devices can link to their heat pump.
         self.appliance_device_ids: dict[str, str] = {}
 
     async def _async_update_data(self) -> DeDietrichData:
         try:
-            return await self._fetch()
+            data = await self._fetch()
         except AuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except ApiError as err:
+            return self._stale_data_or_fail(err)
+        if self._serving_stale:
+            _LOGGER.info("De Dietrich cloud is answering again")
+            self._serving_stale = False
+        self._last_success = dt_util.utcnow()
+        return data
+
+    def _stale_data_or_fail(self, err: ApiError) -> DeDietrichData:
+        """Ride out a short cloud outage by keeping the last good data.
+
+        Only once that data is older than STALE_DATA_GRACE does the poll fail, which
+        makes the entities unavailable.
+        """
+        if (
+            self.data is None
+            or self._last_success is None
+            or dt_util.utcnow() - self._last_success > STALE_DATA_GRACE
+        ):
+            self._serving_stale = False
             raise UpdateFailed(str(err)) from err
+        if not self._serving_stale:
+            _LOGGER.warning(
+                "De Dietrich cloud poll failed (%s); keeping the last data for up to %s",
+                err,
+                STALE_DATA_GRACE,
+            )
+            self._serving_stale = True
+        else:
+            _LOGGER.debug("De Dietrich cloud poll failed again: %s", err)
+        return self.data
 
     async def _fetch(self) -> DeDietrichData:
         dashboard = await self.client.dashboard()

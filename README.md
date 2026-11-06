@@ -18,7 +18,7 @@ The Smart TC has no local API. On my network, its Wi-Fi module has no open ports
 
 This integration therefore talks to the same cloud API as the De Dietrich Smart app:
 - It signs in with your app email and password.
-- It polls your system once a minute.
+- It polls your system once a minute. If the cloud doesn't answer, it keeps showing the last values for up to 5 minutes before the entities become unavailable.
 - It sends your commands the way the app does.
 
 BDR Thermea runs one backend for several brands, so Remeha Home, Baxi and Brötje accounts may work too. That's untested.
@@ -155,7 +155,7 @@ logger:
 
 **Common problems:**
 - **"Wrong email or password"**: check that you can sign in to the De Dietrich Smart app with the same details.
-- **Entities unavailable**: the heat pump is offline in the cloud. Check the *Cloud connection* sensor and the app.
+- **Entities unavailable**: either the heat pump is offline in the cloud, or the cloud hasn't answered for more than 5 minutes. Check the *Cloud connection* sensor, the app, and the Home Assistant log.
 
 Issues and pull requests are welcome. Remember the disclaimer, though: I can only test against my own system.
 

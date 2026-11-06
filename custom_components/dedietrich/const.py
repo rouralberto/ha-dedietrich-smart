@@ -26,6 +26,9 @@ SCOPE = (
 )
 
 UPDATE_INTERVAL = timedelta(seconds=60)
+# The cloud sometimes times out on a single poll. Keep showing the last data for this
+# long before marking the entities unavailable; heating values change slowly anyway.
+STALE_DATA_GRACE = timedelta(minutes=5)
 # Energy figures only change every hour or so; don't ask for them every poll.
 ENERGY_INTERVAL = timedelta(minutes=15)
 # Heating curves are settings: they only change when someone edits them.

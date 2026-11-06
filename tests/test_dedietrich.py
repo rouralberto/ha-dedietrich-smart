@@ -224,6 +224,33 @@ async def test_offline_appliance(hass: HomeAssistant, entry, cloud: FakeCloud) -
     assert state(hass, "binary_sensor", f"{APPLIANCE}_online").state == "off"
 
 
+async def test_short_cloud_outage_keeps_last_data(
+    hass: HomeAssistant, entry, cloud: FakeCloud, freezer
+) -> None:
+    async def poll_after(minutes: float) -> None:
+        freezer.tick(timedelta(minutes=minutes))
+        await later(hass, 0)
+
+    room = eid(hass, "climate", ZONE)
+    cloud.fail = ApiError("GET /homes/dashboard: TimeoutError()")
+    # Up to 5 minutes without an answer: the last data stays.
+    for _ in range(4):
+        await poll_after(1)
+        assert hass.states.get(room).state == "auto"
+    # A good poll starts the grace period over.
+    cloud.fail = None
+    await poll_after(1)
+    cloud.fail = ApiError("GET /homes/dashboard: TimeoutError()")
+    await poll_after(4)
+    assert hass.states.get(room).state == "auto"
+    # Older than 5 minutes: unavailable, until the cloud answers again.
+    await poll_after(1.5)
+    assert hass.states.get(room).state == "unavailable"
+    cloud.fail = None
+    await poll_after(1)
+    assert hass.states.get(room).state == "auto"
+
+
 # --- commands ----------------------------------------------------------------------
 
 
