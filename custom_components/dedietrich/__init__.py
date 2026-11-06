@@ -9,9 +9,9 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import DeDietrichClient
-from .const import CONF_TOKEN
+from .const import CONF_TOKEN, DOMAIN
 from .coordinator import DeDietrichCoordinator
-from .entity import appliance_device_info
+from .entity import appliance_device_info, device_names
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -53,6 +53,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeDietrichConfigEntry) -
             **appliance_device_info(coordinator, appliance_id),
         )
         coordinator.appliance_device_ids[appliance_id] = device.id
+
+    @callback
+    def follow_renames() -> None:
+        # Device names are otherwise only set at setup: follow circuits renamed in the
+        # app. A name given in Home Assistant (name_by_user) still takes precedence.
+        for item_id, name in device_names(coordinator).items():
+            device = devices.async_get_device(identifiers={(DOMAIN, item_id)})
+            if device and device.name != name:
+                devices.async_update_device(device.id, name=name)
+
+    entry.async_on_unload(coordinator.async_add_listener(follow_renames))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

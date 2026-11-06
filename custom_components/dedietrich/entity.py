@@ -105,6 +105,21 @@ def _device_info(coordinator: DeDietrichCoordinator, kind: Kind, item_id: str) -
     )
 
 
+def device_names(coordinator: DeDietrichCoordinator) -> dict[str, str]:
+    """Each device's name as the cloud reports it now, keyed by its identifier."""
+    data = coordinator.data
+    items: list[tuple[Kind, dict]] = [
+        ("appliance", data.appliances),
+        ("climate_zone", data.climate_zones),
+        ("hot_water_zone", data.hot_water_zones),
+    ]
+    return {
+        item_id: _device_info(coordinator, kind, item_id)["name"]
+        for kind, source in items
+        for item_id in source
+    }
+
+
 class DeDietrichEntity(CoordinatorEntity[DeDietrichCoordinator]):
     _attr_has_entity_name = True
 

@@ -216,6 +216,32 @@ async def test_circuit_without_room_unit(hass: HomeAssistant, entry: MockConfigE
         "Heating circuit", None, None)
 
 
+async def test_circuit_renamed_in_app(hass: HomeAssistant, entry, cloud: FakeCloud) -> None:
+    """A rename in the app reaches the device and its entities without a reload, but
+    doesn't override a name given in Home Assistant."""
+    devices = dr.async_get(hass)
+    room = devices.async_get_device_by_identifier((DOMAIN, ZONE), entry.entry_id)
+    circuit = devices.async_get_device_by_identifier((DOMAIN, CIRCUIT), entry.entry_id)
+    devices.async_update_device(circuit.id, name_by_user="Basement")
+
+    zones = cloud.dashboard["appliances"][0]["climateZones"]
+    zones[0]["name"] = "Suelo Radiante"
+    zones[1]["name"] = "CIRCA 1"
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert devices.async_get(room.id).name == "Suelo Radiante"
+    assert state(hass, "climate", ZONE).attributes["friendly_name"] == "Suelo Radiante"
+    assert (
+        state(hass, "sensor", f"{ZONE}_room_temperature").attributes["friendly_name"]
+        == "Suelo Radiante Room temperature"
+    )
+    assert eid(hass, "climate", ZONE) == "climate.salon"  # entity ids are kept
+    circuit = devices.async_get(circuit.id)
+    assert (circuit.name, circuit.name_by_user) == ("CIRCA 1", "Basement")
+    assert state(hass, "climate", CIRCUIT).attributes["friendly_name"] == "Basement"
+
+
 async def test_offline_appliance(hass: HomeAssistant, entry, cloud: FakeCloud) -> None:
     cloud.dashboard["appliances"][0]["applianceOnline"] = False
     await entry.runtime_data.async_refresh()
