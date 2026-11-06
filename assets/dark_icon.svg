@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="24 -4 464 464" width="512" height="512">
+  <!-- De Dietrich Smart for Home Assistant: an original mark (thermostat arc from cool to warm, a house with rising heat). Not the De Dietrich logo. -->
+  <defs>
+    <linearGradient id="arc" x1="56" y1="0" x2="456" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F80ED"/>
+      <stop offset="0.3" stop-color="#9C6ADE"/>
+      <stop offset="0.6" stop-color="#F2994A"/>
+      <stop offset="1" stop-color="#E5484D"/>
+    </linearGradient>
+  </defs>
+  <path d="M 114.6 397.4 A 200 200 0 1 1 397.4 397.4" fill="none" stroke="url(#arc)" stroke-width="52" stroke-linecap="round"/>
+  <path d="M 256 140 L 368 236 L 344 236 L 344 362 Q 344 376 330 376 L 182 376 Q 168 376 168 362 L 168 236 L 144 236 Z" fill="#E8EEF4" stroke="#E8EEF4" stroke-width="16" stroke-linejoin="round"/>
+  <g fill="none" stroke="#1B2633" stroke-width="16" stroke-linecap="round">
+    <path d="M 220 344 C 204 322 236 302 220 280 C 208 264 222 252 220 244"/>
+    <path d="M 256 344 C 240 322 272 302 256 280 C 244 264 258 252 256 244"/>
+    <path d="M 292 344 C 276 322 308 302 292 280 C 280 264 294 252 292 244"/>
+  </g>
+</svg>
